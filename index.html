@@ -179,6 +179,7 @@
       align-items: center;
       gap: 12px;
       transition: border-color 0.1s, opacity 0.2s;
+      position: relative;
     }
 
     .task:hover { border-color: var(--border-mid); }
@@ -258,23 +259,35 @@
     }
 
     .delete-btn {
-      width: 28px;
-      height: 28px;
-      border-radius: 50%;
-      border: none;
-      background: transparent;
+      position: absolute;
+      top: 50%;
+      right: 12px;
+      transform: translateY(-50%) scale(0.85);
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-md);
+      border: 0.5px solid var(--border-mid);
+      background: var(--bg-primary);
       color: var(--text-secondary);
       cursor: pointer;
       display: flex;
       align-items: center;
       justify-content: center;
-      flex-shrink: 0;
       opacity: 0;
-      transition: opacity 0.15s, background 0.15s, color 0.15s;
+      transition: opacity 0.15s, background 0.15s, color 0.15s, transform 0.15s, border-color 0.15s;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.1);
     }
 
-    .task:hover .delete-btn { opacity: 1; }
-    .delete-btn:hover { background: var(--red-bg); color: var(--red-text); }
+    .task:hover .delete-btn {
+      opacity: 1;
+      transform: translateY(-50%) scale(1);
+    }
+
+    .delete-btn:hover {
+      background: var(--red-bg);
+      color: var(--red-text);
+      border-color: var(--red-text);
+    }
 
     .empty {
       text-align: center;
@@ -422,6 +435,7 @@
         <label>Assigned to</label>
         <select id="f-person">
           <option value="" disabled selected>Select a team member</option>
+          <option>All</option>
           <option>Adam</option>
           <option>Chelsi</option>
           <option>Chintan</option>
@@ -442,6 +456,10 @@
       <div class="field">
         <label>Due date</label>
         <input type="date" id="f-date" />
+      </div>
+      <div class="field">
+        <label>Due time <span style="font-size:10px;color:var(--text-secondary);text-transform:none;letter-spacing:0">(optional)</span></label>
+        <input type="time" id="f-time" />
       </div>
       <div class="modal-actions">
         <button class="btn-cancel" onclick="closeModal()">Cancel</button>
@@ -493,6 +511,14 @@
       return `${diff}d left`;
     }
 
+    function formatTime(t) {
+      if (!t) return '';
+      const [h, m] = t.split(':').map(Number);
+      const ampm = h >= 12 ? 'pm' : 'am';
+      const h12 = h % 12 || 12;
+      return `${h12}:${String(m).padStart(2,'0')}${ampm}`;
+    }
+
     function initials(name) {
       return name.trim().split(/\s+/).map(w => w[0]).join('').toUpperCase().slice(0, 2);
     }
@@ -516,6 +542,12 @@
         list.innerHTML = visible.map(task => {
           const st = getStatus(task);
           const ci = colorIdx(task.person);
+          const isAll = task.person === 'All';
+          const avatarStyle = isAll
+            ? `background:var(--bg-secondary);color:var(--text-secondary);font-size:9px;`
+            : `background:${BG_COLORS[ci]};color:${COLORS[ci]}`;
+          const avatarText = isAll ? 'ALL' : initials(task.person);
+          const timeStr = task.time ? `<span class="meta-item"><i class="ti ti-clock" style="font-size:12px"></i>${formatTime(task.time)}</span>` : '';
           return `<div class="task${task.done ? ' done' : ''}">
             <div class="check${task.done ? ' checked' : ''}" onclick="toggle(${task.id})" title="Mark ${task.done ? 'incomplete' : 'complete'}">
               ${task.done ? '<i class="ti ti-check" style="font-size:12px;color:white"></i>' : ''}
@@ -525,12 +557,13 @@
               <div class="task-meta">
                 <span class="meta-item"><i class="ti ti-user" style="font-size:12px"></i>${task.person}</span>
                 <span class="meta-item"><i class="ti ti-calendar" style="font-size:12px"></i>${task.date}</span>
+                ${timeStr}
                 <span class="badge ${st}">${badgeLabel(st, task.date)}</span>
               </div>
             </div>
-            <div class="avatar" style="background:${BG_COLORS[ci]};color:${COLORS[ci]}">${initials(task.person)}</div>
+            <div class="avatar" style="${avatarStyle}">${avatarText}</div>
             <button class="delete-btn" onclick="deleteTask(${task.id})" title="Delete task" aria-label="Delete task">
-              <i class="ti ti-trash" style="font-size:14px"></i>
+              <i class="ti ti-trash" style="font-size:15px"></i>
             </button>
           </div>`;
         }).join('');
@@ -569,6 +602,7 @@
       document.getElementById('f-title').value = '';
       document.getElementById('f-person').value = '';
       document.getElementById('f-date').value = daysFromNow(7);
+      document.getElementById('f-time').value = '';
       document.getElementById('modal').classList.add('open');
       setTimeout(() => document.getElementById('f-title').focus(), 50);
     }
@@ -581,11 +615,12 @@
       const title = document.getElementById('f-title').value.trim();
       const person = document.getElementById('f-person').value.trim();
       const date = document.getElementById('f-date').value;
+      const time = document.getElementById('f-time').value;
       if (!title || !person || !date) {
         alert('Please fill in all fields.');
         return;
       }
-      tasks.push({ id: Date.now(), title, person, date, done: false });
+      tasks.push({ id: Date.now(), title, person, date, time: time || '', done: false });
       save();
       closeModal();
       renderTasks();

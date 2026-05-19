@@ -257,6 +257,25 @@
       flex-shrink: 0;
     }
 
+    .delete-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: none;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+      opacity: 0;
+      transition: opacity 0.15s, background 0.15s, color 0.15s;
+    }
+
+    .task:hover .delete-btn { opacity: 1; }
+    .delete-btn:hover { background: var(--red-bg); color: var(--red-text); }
+
     .empty {
       text-align: center;
       padding: 3rem;
@@ -493,6 +512,9 @@
               </div>
             </div>
             <div class="avatar" style="background:${BG_COLORS[ci]};color:${COLORS[ci]}">${initials(task.person)}</div>
+            <button class="delete-btn" onclick="deleteTask(${task.id})" title="Delete task" aria-label="Delete task">
+              <i class="ti ti-trash" style="font-size:14px"></i>
+            </button>
           </div>`;
         }).join('');
       }
@@ -508,6 +530,13 @@
 
     function toggle(id) {
       tasks = tasks.map(t => t.id === id ? { ...t, done: !t.done } : t);
+      save();
+      renderTasks();
+    }
+
+    function deleteTask(id) {
+      if (!confirm('Delete this task?')) return;
+      tasks = tasks.filter(t => t.id !== id);
       save();
       renderTasks();
     }
